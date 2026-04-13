@@ -1,53 +1,20 @@
-const mongoose = require("mongoose");
+const mongoose = require("mongoose")
 
 async function connectDB() {
   try {
 
-    const uri = process.env.MONGO_URI;
+    const uri = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/priorityQueue"
 
-    if (!uri) {
-      throw new Error("MONGO_URI not defined in .env");
-    }
+    await mongoose.connect(uri)
 
-    await mongoose.connect(uri, {
-      autoIndex: true,
-      serverSelectionTimeoutMS: 5000
-    });
-
-    console.log("MongoDB Connected");
+    console.log("MongoDB Connected")
 
   } catch (err) {
 
-    console.error("MongoDB connection error:", err.message);
-    process.exit(1);
+    console.error("MongoDB connection error:", err)
+    process.exit(1)
 
   }
 }
 
-module.exports = connectDB;
-
-async function connectDB() {
-  try {
-
-    const uri = process.env.MONGO_URI;
-
-    if (!uri) {
-      throw new Error("MONGO_URI not defined in .env");
-    }
-
-    await mongoose.connect(uri, {
-      autoIndex: true,
-      serverSelectionTimeoutMS: 5000
-    });
-
-    console.log("MongoDB Connected");
-
-  } catch (err) {
-
-    console.error("MongoDB connection error:", err.message);
-    process.exit(1);
-
-  }
-}
-
-module.exports = connectDB;
+module.exports = connectDB
