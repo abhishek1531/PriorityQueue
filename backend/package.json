@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/server.js",
+    "dlq": "node src/worker/deadLetterWorker.js",
+    "scaler": "node src/scaler.js",
+    "dev": "concurrently \"npm run start\" \"npm run dlq\" \"npm run scaler\""
   },
   "keywords": [],
   "author": "",
@@ -12,5 +15,15 @@
   "type": "commonjs",
   "devDependencies": {
     "concurrently": "^9.2.1"
+  },
+  "dependencies": {
+    "bullmq": "^5.73.5",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "ioredis": "^5.10.1",
+    "mongoose": "^9.4.1",
+    "socket.io": "^4.8.3",
+    "winston": "^3.19.0"
   }
 }
