@@ -2,41 +2,54 @@ const express = require("express")
 const router = express.Router()
 
 /* Controllers */
-
-const { createRequest } = require("../controllers/requestController")
+const {
+  createRequest,
+  getRequests,
+  getCompletedRequests,
+  getGroupedByPriority,
+  getCompletedGrouped
+} = require("../controllers/requestController")
 
 /* Services */
-
 const { applyPriorityAging } = require("../services/agingService")
 const { checkSLA } = require("../services/slaService")
 
 /* Model */
-
 const Request = require("../models/request")
 
-/* Redis */
-
-const Redis = require("ioredis")
-
-const redis = new Redis({
-  host: process.env.REDIS_HOST || "127.0.0.1",
-  port: process.env.REDIS_PORT || 6379
-})
+/*  Redis Connection */
+const { connection } = require("../queue/queueManager")
 
 /* ------------------------------------
    Create Request
 ------------------------------------ */
-
 router.post("/request", createRequest)
+
+/* ------------------------------------
+   Get All Requests
+------------------------------------ */
+router.get("/requests", getRequests)
+
+/* ------------------------------------
+   Get Completed Requests
+------------------------------------ */
+router.get("/requests/completed", getCompletedRequests)
+
+/* ------------------------------------
+   Group Requests by Priority
+------------------------------------ */
+router.get("/requests/grouped", getGroupedByPriority)
+
+/* ------------------------------------
+   Group Completed Requests
+------------------------------------ */
+router.get("/requests/completed/grouped", getCompletedGrouped)
 
 /* ------------------------------------
    Apply Priority Aging
 ------------------------------------ */
-
 router.post("/aging", async (req, res) => {
-
   try {
-
     await applyPriorityAging()
 
     res.json({
@@ -44,23 +57,18 @@ router.post("/aging", async (req, res) => {
     })
 
   } catch (err) {
-
     console.error(err)
 
     res.status(500).json({
       error: "Failed to apply priority aging"
     })
-
   }
-
 })
 
 /* ------------------------------------
    SLA Monitoring
 ------------------------------------ */
-
 router.get("/sla", async (req, res) => {
-
   try {
 
     const violations = await checkSLA()
@@ -68,23 +76,18 @@ router.get("/sla", async (req, res) => {
     res.json(violations)
 
   } catch (err) {
-
     console.error(err)
 
     res.status(500).json({
       error: "SLA check failed"
     })
-
   }
-
 })
 
 /* ------------------------------------
    Queue Statistics (Dashboard)
 ------------------------------------ */
-
 router.get("/stats", async (req, res) => {
-
   try {
 
     const total = await Request.countDocuments()
@@ -93,12 +96,16 @@ router.get("/stats", async (req, res) => {
     const completed = await Request.countDocuments({ status: "completed" })
     const failed = await Request.countDocuments({ status: "failed" })
 
+    //  Get worker count from Redis
+    const activeWorkers = parseInt(await connection.get("activeWorkers")) || 0
+
     res.json({
       total,
       queued,
       processing,
       completed,
-      failed
+      failed,
+      activeWorkers
     })
 
   } catch (err) {
@@ -108,52 +115,40 @@ router.get("/stats", async (req, res) => {
     res.status(500).json({
       error: "Failed to fetch queue statistics"
     })
-
   }
-
 })
 
 /* ------------------------------------
-   Worker Health (Real-Time)
+   Worker Health (Updated)
 ------------------------------------ */
-
 router.get("/workers", async (req, res) => {
-
   try {
 
-    const workers = await redis.smembers("active_workers")
+    const activeWorkers = parseInt(await connection.get("activeWorkers")) || 0
 
     res.json({
-      count: workers.length,
-      workers: workers,
-      status: "running",
+      activeWorkers,
+      workerIds: Array.from({ length: activeWorkers }, (_, i) => `worker-${i + 1}`),
       timestamp: new Date()
     })
 
-  } catch (error) {
-
-    console.error("Worker health error:", error)
+  } catch (err) {
 
     res.status(500).json({
-      error: "Failed to fetch worker health"
+      error: "Failed to fetch workers"
     })
-
   }
-
 })
 
 /* ------------------------------------
    System Health
 ------------------------------------ */
-
 router.get("/health", (req, res) => {
-
   res.json({
     status: "OK",
     service: "Priority Request Queue System",
     time: new Date()
   })
-
 })
 
 module.exports = router
