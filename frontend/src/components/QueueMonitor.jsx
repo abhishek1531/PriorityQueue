@@ -42,4 +42,4 @@ function QueueMonitor() {
   )
 }
 
-export default QueueMonitor
+export default QueueMonitor //

@@ -77,4 +77,4 @@ function AnalyticsCharts() {
   )
 }
 
-export default AnalyticsCharts
+export default AnalyticsCharts //
